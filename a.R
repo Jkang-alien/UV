@@ -1,4 +1,4 @@
-setwd('/home/jun/melanoma/')
+setwd('/home/jun/UV_git/')
 
 #####################################################################################
 
@@ -102,12 +102,282 @@ sum((CtoT+GtoA+CCtoTT) > 0)
 
 
 ####################################################################################
-library('cgdsr')
-mycgds = CGDS("http://www.cbioportal.org/public-portal/")
 
-test(mycgds)
-studies <- getCancerStudies(mycgds)
-mycancerstudy = getCancerStudies(mycgds)[78,1]
-caselist = getCaseLists(mycgds,mycancerstudy)
-mycaselist = getCaseLists(mycgds,mycancerstudy)[2,1]
-myclinicaldata = getClinicalData(mycgds,mycaselist)
+library(compareGroups)
+
+compareGroups(UV.signature~ 
+                CURATED_AGE_AT_INITIAL_PATHOLOGIC_DIAGNOSIS +
+                CURATED_AGE_AT_TCGA_SPECIMEN +
+                GENDER+
+                CURATED_SITE_OF_PRIMARY_TUMOR_KNOWN_PRIMARY_ONLY +
+                REGIONAL_VS_PRIMARY+
+                CURATED_BRESLOW +
+                CURATED_ULCERATION +
+                PIGMENT.SCORE+
+                CURATED_PATHOLOGIC_STAGE_AJCC7_AT_DIAGNOSIS_SIMPLE +
+                MUTATIONSUBTYPES,
+              data = data) -> table
+
+table(data$Pathologic_stage, data$uv_g)
+
+createTable(table) -> table
+export2csv(table, 'table.csv')
+
+
+############################  survival ############################# 
+library(survival)
+library(rms)
+
+data$stage <- 
+  factor(data$CURATED_PATHOLOGIC_STAGE_AJCC7_AT_DIAGNOSIS_SIMPLE %in% 
+           c('Stage III' ,'Stage IV'),
+         levels = c(FALSE, TRUE),
+         labels = c('Stage 0-II', 'Stage III-IV'))
+data$stage[is.na(data$CURATED_PATHOLOGIC_STAGE_AJCC7_AT_DIAGNOSIS_SIMPLE)] <- NA
+summary (data$CURATED_PATHOLOGIC_STAGE_AJCC7_AT_DIAGNOSIS_SIMPLE)
+
+data$OS_M <- as.numeric(as.character(data$CURATED_DAYS_TO_DEATH_OR_LAST_FU))/30.4
+data$TCGA_M <- as.numeric(as.character(data$CURATED_TCGA_DAYS_TO_DEATH_OR_LAST_FU))/30.4
+
+data_early <- subset(data, stage == 'Stage 0-II')
+data_late <- subset(data, stage == 'Stage III-IV')
+
+strata = levels(data$UV.signature)
+
+library(Cairo)
+CairoSVG(file = "Survival.svg",  width = 10, height = 15, 
+         onefile = TRUE, bg = "transparent",
+         pointsize = 12)
+par(mfrow = c(3,2), mar=c(6,4,2,8), mgp = c(2, 1, 0))
+
+fit = npsurv(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
+               UV.signature, data = data)
+fit
+
+diff = survdiff(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
+                  UV.signature, data = data)
+diff
+
+survplot(fit,
+         time.inc = 12,
+         title = 'All_OA',
+         lty = c(1:3),
+         conf="none", add=FALSE, 
+         label.curves=FALSE, abbrev.label=FALSE,
+         levels.only=TRUE, lwd=par('lwd'),
+         col=1, col.fill=gray(seq(.95, .75, length=5)),
+         loglog=FALSE,n.risk=TRUE,logt=FALSE,
+         dots=FALSE,
+         grid=FALSE,
+         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
+         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
+)
+
+legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.85, 'P-value = 0.073', cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.8, 'All OA', cex = 1,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+fit = npsurv(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
+             ~ UV.signature, data = data)
+fit
+
+diff = survdiff(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
+                ~ UV.signature, data = data)
+diff
+
+survplot(fit,
+         time.inc = 12,
+         xlab = 'Months',
+         lty = c(1:3),
+         conf="none", add=FALSE, 
+         label.curves=FALSE, abbrev.label=FALSE,
+         levels.only=TRUE, lwd=par('lwd'),
+         col=1, col.fill=gray(seq(.95, .75, length=5)),
+         loglog=FALSE,n.risk=TRUE,logt=FALSE,
+         dots=FALSE,
+         grid=FALSE,
+         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
+         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
+)
+
+legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.85, 'P-value = 0.33', cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.8, 'All TCGA', cex = 1,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+################## Early Stage ##############################
+fit = npsurv(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
+               UV.signature, data = data_early)
+fit
+
+diff = survdiff(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
+                  UV.signature, data = data_early)
+diff
+
+survplot(fit,
+         time.inc = 12,
+         xlab = 'Months',
+         lty = c(1:3),
+         conf="none", add=FALSE, 
+         label.curves=FALSE, abbrev.label=FALSE,
+         levels.only=TRUE, lwd=par('lwd'),
+         col=1, col.fill=gray(seq(.95, .75, length=5)),
+         loglog=FALSE,n.risk=TRUE,logt=FALSE,
+         dots=FALSE,
+         grid=FALSE,
+         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
+         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
+)
+
+legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.85, 'P-value = 0.486', cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.8, 'Early stage Overall', cex = 1,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+fit = npsurv(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
+             ~ UV.signature, data = data_early)
+fit
+
+diff = survdiff(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
+                ~ UV.signature, data = data_early)
+diff
+
+survplot(fit,
+         time.inc = 12,
+         xlab = 'Months',
+         lty = c(1:3),
+         conf="none", add=FALSE, 
+         label.curves=FALSE, abbrev.label=FALSE,
+         levels.only=TRUE, lwd=par('lwd'),
+         col=1, col.fill=gray(seq(.95, .75, length=5)),
+         loglog=FALSE,n.risk=TRUE,logt=FALSE,
+         dots=FALSE,
+         grid=FALSE,
+         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
+         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
+)
+
+legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.85, 'P-value = 0.645', cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.8, 'Early stage TCGA', cex = 1,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+###################### Late Stage ########################
+
+fit = npsurv(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
+               UV.signature, data = data_late)
+fit
+
+diff = survdiff(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
+                  UV.signature, data = data_late)
+diff
+
+survplot(fit,
+         time.inc = 12,
+         xlab = 'Months',
+         lty = c(1:3),
+         conf="none", add=FALSE, 
+         label.curves=FALSE, abbrev.label=FALSE,
+         levels.only=TRUE, lwd=par('lwd'),
+         col=1, col.fill=gray(seq(.95, .75, length=5)),
+         loglog=FALSE,n.risk=TRUE,logt=FALSE,
+         dots=FALSE,
+         grid=FALSE,
+         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
+         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
+)
+
+legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.85, 'P-value = 0.046', cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.8, 'Late stage Overall', cex = 1,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+fit = npsurv(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
+             ~ UV.signature, data = data_late)
+fit
+
+diff = survdiff(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
+                ~ UV.signature, data = data_late)
+diff
+
+survplot(fit,
+         time.inc = 12,
+         xlab = 'Months',
+         lty = c(1:3),
+         conf="none", add=FALSE, 
+         label.curves=FALSE, abbrev.label=FALSE,
+         levels.only=TRUE, lwd=par('lwd'),
+         col=1, col.fill=gray(seq(.95, .75, length=5)),
+         loglog=FALSE,n.risk=TRUE,logt=FALSE,
+         dots=FALSE,
+         grid=FALSE,
+         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
+         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
+)
+
+legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.85, 'P-value = 0.099', cex = 0.8,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+
+legend(5.5*12, 0.8, 'Late stage TCGA', cex = 1,
+       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
+       trace = TRUE,
+       bty = 'n')
+dev.off()
