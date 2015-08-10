@@ -1,0 +1,1 @@
+f0e41d7ce2762cc64bb1cbf14aacd4f6 SKCM.snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.seg.txt
