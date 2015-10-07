@@ -214,30 +214,6 @@ write.table(cnv_NUV, file = "CNV_NUV.txt", append = FALSE, quote = FALSE,
             sep = "\t", dec = ".", row.names = FALSE,
             col.names = TRUE)
 
-##########################################################################################
-
-untar('broad.mit.edu_SKCM.Genome_Wide_SNP_6.Level_3.tar.gz', 
-      exdir = '.')
-con <- file('./broad.mit.edu_SKCM.IlluminaGA_DNASeq.Level_2.1.5.0/skcm_clean_pairs.aggregated.capture.tcga.uuid.somatic.maf')
-
-mut <- read.delim('./broad.mit.edu_SKCM.IlluminaGA_DNASeq.Level_2.1.5.0/skcm_clean_pairs.aggregated.capture.tcga.uuid.somatic.maf',
-                  header = FALSE, skip = 5)
-
-colnames(mut) <- unlist(strsplit(readLines(con, n = 5)[5], '\t'))
-summary(mut)
-
-head(mut)
-
-pre_seq <- substr(x = mut$ref_context, start = 9, stop = 9)
-colnames(mut)
-subst <- factor(gsub('^g\\.chr.{0,}:[0-9]{0,}_?[0-9]{0,}','', mut$Genome_Change))
-CtoT <- toupper(pre_seq[grep('C>T', subst)]) %in% c('C', 'T')
-GtoA <- toupper(pre_seq[grep('G>A', subst)]) %in% c('G', 'A')
-CCtoTT <- subst %in% c('CC>TT', 'GG>AA')
-
-sum((CtoT+GtoA+CCtoTT) > 0)
-
-
 
 ############################  survival ############################# 
 library(survival)
@@ -305,195 +281,70 @@ legend(55, 0.87, 'P-value = 0.081', cex = 0.8,
 dev.off()
 
 
-fit = npsurv(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
-               UV.signature, data = data)
-fit
+################### Multivariate ######################
 
-diff = survdiff(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
-                  UV.signature, data = data)
-diff
+data$UV.signature <- C(data$UV.signature, contr.treatment, base = 2)
 
-survplot(fit,
-         time.inc = 12,
-         title = 'All_OA',
-         lty = c(1:3),
-         conf="none", add=FALSE, 
-         label.curves=FALSE, abbrev.label=FALSE,
-         levels.only=TRUE, lwd=par('lwd'),
-         col=1, col.fill=gray(seq(.95, .75, length=5)),
-         loglog=FALSE,n.risk=TRUE,logt=FALSE,
-         dots=FALSE,
-         grid=FALSE,
-         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
-         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
-)
+cox_TCGA <- coxph(Surv(TCGA_M, CURATED_VITAL_STATUS == 'Dead')~
+                    CURATED_AGE_AT_TCGA_SPECIMEN +
+                    #stage (Stage at diagnosis is not compatible with post accession survival)
+                    UV.signature, 
+                  data = data)
 
-legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
+survfit(cox_TCGA)
+
+sink('result.txt')
+summary(cox_TCGA)
+sink()
+
+############# UV mutation plot ##########################
+
+t(t(colnames(data)))
+
+library(Cairo)
+
+CairoSVG(file = "mutation.svg",  width = 5, height = 5, 
+         onefile = TRUE, bg = "transparent",
+         pointsize = 12)
+par(mar=c(4.2,6,4,4))
+plot(log(data$TOTAL.MUTATIONS, base = 10), data$dipyr_CtoT^5,
+     col =data$UV.signature,
+     ylab = 'Fifth power of proportion\n of C to T at dipyrimidine site',
+     xlab = 'Log transformed number of mutations')
+
+legend(1.0, 0.72,
+       c('UV signature',
+         'not UV signature'),
+       pch = 1, 
+       col = c(2,1),
        bty = 'n')
 
-legend(5.5*12, 0.85, 'P-value = 0.073', cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.8, 'All OA', cex = 1,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-################## Early Stage ##############################
-fit = npsurv(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
-               UV.signature, data = data_early)
-fit
-
-diff = survdiff(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
-                  UV.signature, data = data_early)
-diff
-
-survplot(fit,
-         time.inc = 12,
-         xlab = 'Months',
-         lty = c(1:3),
-         conf="none", add=FALSE, 
-         label.curves=FALSE, abbrev.label=FALSE,
-         levels.only=TRUE, lwd=par('lwd'),
-         col=1, col.fill=gray(seq(.95, .75, length=5)),
-         loglog=FALSE,n.risk=TRUE,logt=FALSE,
-         dots=FALSE,
-         grid=FALSE,
-         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
-         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
-)
-
-legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.85, 'P-value = 0.486', cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.8, 'Early stage Overall', cex = 1,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-fit = npsurv(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
-             ~ UV.signature, data = data_early)
-fit
-
-diff = survdiff(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
-                ~ UV.signature, data = data_early)
-diff
-
-survplot(fit,
-         time.inc = 12,
-         xlab = 'Months',
-         lty = c(1:3),
-         conf="none", add=FALSE, 
-         label.curves=FALSE, abbrev.label=FALSE,
-         levels.only=TRUE, lwd=par('lwd'),
-         col=1, col.fill=gray(seq(.95, .75, length=5)),
-         loglog=FALSE,n.risk=TRUE,logt=FALSE,
-         dots=FALSE,
-         grid=FALSE,
-         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
-         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
-)
-
-legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.85, 'P-value = 0.645', cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.8, 'Early stage TCGA', cex = 1,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-###################### Late Stage ########################
-
-fit = npsurv(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
-               UV.signature, data = data_late)
-fit
-
-diff = survdiff(Surv(OS_M, CURATED_VITAL_STATUS == 'Dead')~
-                  UV.signature, data = data_late)
-diff
-
-survplot(fit,
-         time.inc = 12,
-         xlab = 'Months',
-         lty = c(1:3),
-         conf="none", add=FALSE, 
-         label.curves=FALSE, abbrev.label=FALSE,
-         levels.only=TRUE, lwd=par('lwd'),
-         col=1, col.fill=gray(seq(.95, .75, length=5)),
-         loglog=FALSE,n.risk=TRUE,logt=FALSE,
-         dots=FALSE,
-         grid=FALSE,
-         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
-         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
-)
-
-legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.85, 'P-value = 0.046', cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.8, 'Late stage Overall', cex = 1,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-fit = npsurv(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
-             ~ UV.signature, data = data_late)
-fit
-
-diff = survdiff(Surv(TCGA_M, CURATED_MELANOMA_SPECIFIC_VITAL_STATUS..0....ALIVE.OR.CENSORED...1....DEAD.OF.MELANOMA.. == 1)
-                ~ UV.signature, data = data_late)
-diff
-
-survplot(fit,
-         time.inc = 12,
-         xlab = 'Months',
-         lty = c(1:3),
-         conf="none", add=FALSE, 
-         label.curves=FALSE, abbrev.label=FALSE,
-         levels.only=TRUE, lwd=par('lwd'),
-         col=1, col.fill=gray(seq(.95, .75, length=5)),
-         loglog=FALSE,n.risk=TRUE,logt=FALSE,
-         dots=FALSE,
-         grid=FALSE,
-         srt.n.risk=0, sep.n.risk=0.04, adj.n.risk=0.5, 
-         y.n.risk=-0.25, cex.n.risk=0.6, pr=FALSE       
-)
-
-legend(60, 1.0, strata, lty = c(1:3), cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.85, 'P-value = 0.099', cex = 0.8,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
-
-legend(5.5*12, 0.8, 'Late stage TCGA', cex = 1,
-       xjust = 0, yjust = 1, x.intersp = 1, y.intersp = 1,
-       trace = TRUE,
-       bty = 'n')
 dev.off()
+
+library(sm)
+# plot densities 
+sm.density.compare(data$dipyr_CtoT[is.na(data$dipyr_CtoT) == FALSE]^5, 
+                   data$UV.signature[is.na(data$dipyr_CtoT) == FALSE],
+                   lty = c(1,1),
+                   col = c(1,2),
+                   xlim = c(0,0.7),
+                   h = 0.05,
+                   model = 'none',
+                   xlab = '')
+
+sm.density.compare(log(data$TOTAL.MUTATIONS[is.na(data$TOTAL.MUTATIONS) == FALSE],base = 10), 
+                   data$UV.signature[is.na(data$TOTAL.MUTATIONS) == FALSE],
+                   lty = c(1,1),
+                   col = c(1,2),
+                   xlim = c(1,5),
+                   h = 0.2,
+                   model = 'none',
+                   xlab = '')
+title(main="MPG Distribution by Car Cylinders")
+
+# add legend via mouse click
+colfill<-c(2,1) 
+
+
+data$dipyr_CtoT <- as.numeric(gsub('%', '',data$DIPYRIM.C.T.nTotal.Mut, data$UV.signature))/100
+
