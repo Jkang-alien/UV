@@ -299,6 +299,9 @@ sink()
 
 ############# UV mutation plot ##########################
 
+setwd('/home/jun/UV_git')
+data$dipyr_CtoT <- as.numeric(gsub('%', '',data$DIPYRIM.C.T.nTotal.Mut, data$UV.signature))/100
+
 t(t(colnames(data)))
 
 library(Cairo)
@@ -309,8 +312,17 @@ CairoSVG(file = "mutation.svg",  width = 5, height = 5,
 par(mar=c(4.2,6,4,4))
 plot(log(data$TOTAL.MUTATIONS, base = 10), data$dipyr_CtoT^5,
      col =data$UV.signature,
-     ylab = 'Fifth power of proportion\n of C to T at dipyrimidine site',
-     xlab = 'Log transformed number of mutations')
+     ylab = 'Proportion of C to T\n at dipyrimidine site',
+     xlab = 'Number of mutations',
+     xlim = c(1, 5),
+     yaxt="n",
+     xaxt = 'n'
+     )
+
+axis(2, at=c(0.1, 0.6, 0.7, 0.8, 0.9)^5, 
+     labels=c(0.1, 0.6, 0.7, 0.8, 0.9), las=2)
+axis(1, at=log(c(10, 100, 1000, 10000, 100000), base = 10), 
+     labels=c(10, 100, 1000, 10000, 100000), las=1)
 
 legend(1.0, 0.72,
        c('UV signature',
