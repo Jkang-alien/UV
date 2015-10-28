@@ -140,11 +140,18 @@ wilcox.test(PIGMENT.SCORE.integ~UV.signature, data)
 wilcox.test(LYMPHOCYTE.DISTRIBUTION.integ~UV.signature, data)
 wilcox.test(LYMPHOCYTE.DENSITY.integ~UV.signature, data)
 wilcox.test(LYMPHOCYTE.SCORE.integ~UV.signature, data)
+wilcox.test(NECROSIS~UV.signature, data)
 wilcox.test(as.numeric(data$CURATED_PATHOLOGIC_STAGE_AJCC7_AT_DIAGNOSIS_SIMPLE)~
               data$UV.signature)
+wilcox.test(data$Tumour.content........nuceli.that.are.tumour.cells......0.100.. ~ data$UV.signature)
 
 
 tapply(data$NECROSIS,data$UV.signature, function(x) median(x, na.rm = T) )
+tapply(data$Latitude,data$UV.signature, function(x) quantile(x, na.rm = T) )
+tapply(data$CURATED_BRESLOW,data$UV.signature, function(x) quantile(x, na.rm = T) )
+tapply(data$Tumour.content........nuceli.that.are.tumour.cells......0.100..,data$UV.signature, function(x) quantile(x, na.rm = T) )
+tapply(data$NECROSIS,data$UV.signature, function(x) quantile(x, na.rm = T) )
+
 hist(data$LYMPHOCYTE.DISTRIBUTION)
 hist(data$LYMPHOCYTE.DENSITY)
 hist(data$LYMPHOCYTE.SCORE)
