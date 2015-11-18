@@ -159,8 +159,20 @@ hist(data$LYMPHOCYTE.SCORE)
 t(t(colnames(data)))
 
 ID_BRAF <- data$Name[data$MUTATIONSUBTYPES == 'BRAF_Hotspot_Mutants']
+ID_BRAF_UV <- data$Name[data$MUTATIONSUBTYPES == 'BRAF_Hotspot_Mutants' & 
+                        data$UV.signature == 'UV signature']
+ID_BRAF_NUV <- data$Name[data$MUTATIONSUBTYPES == 'BRAF_Hotspot_Mutants' & 
+                         data$UV.signature == 'not UV']
 ID_RAS <- data$Name[data$MUTATIONSUBTYPES == 'RAS_Hotspot_Mutants']
+ID_RAS_UV <- data$Name[data$MUTATIONSUBTYPES == 'RAS_Hotspot_Mutants' & 
+                          data$UV.signature == 'UV signature']
+ID_RAS_NUV <- data$Name[data$MUTATIONSUBTYPES == 'RAS_Hotspot_Mutants' & 
+                           data$UV.signature == 'not UV']
 ID_NF1 <- data$Name[data$MUTATIONSUBTYPES == 'NF1_Any_Mutants']
+ID_NF1_UV <- data$Name[data$MUTATIONSUBTYPES == 'NF1_Any_Mutants' & 
+                         data$UV.signature == 'UV signature']
+ID_NF1_NUV <- data$Name[data$MUTATIONSUBTYPES == 'NF1_Any_Mutants' & 
+                          data$UV.signature == 'not UV']
 ID_TW_UV <- data$Name[data$MUTATIONSUBTYPES == 'Triple_WT' & 
                         data$UV.signature == 'UV signature']
 ID_TW_NUV <- data$Name[data$MUTATIONSUBTYPES == 'Triple_WT' & 
@@ -169,7 +181,13 @@ ID_UV <- data$Name[data$UV.signature == 'UV signature']
 ID_NUV <- data$Name[data$UV.signature == 'not UV']
 
 ID_BRAF <- ID_BRAF[!is.na(ID_BRAF)]
+ID_BRAF_NUV <- ID_BRAF_NUV[!is.na(ID_BRAF_NUV)]
+ID_BRAF_UV <- ID_BRAF_UV[!is.na(ID_BRAF_UV)]
 ID_RAS <- ID_RAS[!is.na(ID_RAS)]
+ID_RAS_NUV <- ID_RAS_NUV[!is.na(ID_RAS_NUV)]
+ID_RAS_UV <- ID_RAS_UV[!is.na(ID_RAS_UV)]
+ID_NF1_NUV <- ID_NF1_NUV[!is.na(ID_NF1_NUV)]
+ID_NF1_UV <- ID_NF1_UV[!is.na(ID_NF1_UV)]
 ID_NF1 <- ID_NF1[!is.na(ID_NF1)]
 ID_TW_UV <- ID_TW_UV[!is.na(ID_TW_UV)]
 ID_TW_NUV <- ID_TW_NUV[!is.na(ID_TW_NUV)]
@@ -179,6 +197,8 @@ ID_NUV <- ID_NUV[!is.na(ID_NUV)]
 
 colnames(data)
 
+setwd('/home/jun/UV_git/')
+
 cnv <- read.delim('./gdac.broadinstitute.org_SKCM.Merge_snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.Level_3.2013111400.0.0/SKCM.snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.seg.txt')
 
 summary(cnv)
@@ -186,8 +206,14 @@ summary(cnv)
 cnv$ID <- as.character(gsub('.-...-....-..$', '' , cnv$Sample))
 
 cnv_BRAF <- cnv[cnv$ID %in% ID_BRAF,1:6]
+cnv_BRAF_UV <- cnv[cnv$ID %in% ID_BRAF_UV,1:6]
+cnv_BRAF_NUV <- cnv[cnv$ID %in% ID_BRAF_NUV,1:6]
 cnv_RAS <- cnv[cnv$ID %in% ID_RAS,1:6]
+cnv_RAS_UV <- cnv[cnv$ID %in% ID_RAS_UV,1:6]
+cnv_RAS_NUV <- cnv[cnv$ID %in% ID_RAS_NUV,1:6]
 cnv_NF1 <- cnv[cnv$ID %in% ID_NF1,1:6]
+cnv_NF1_UV <- cnv[cnv$ID %in% ID_NF1_UV,1:6]
+cnv_NF1_NUV <- cnv[cnv$ID %in% ID_NF1_NUV,1:6]
 cnv_TW_UV <- cnv[cnv$ID %in% ID_TW_UV,1:6]
 cnv_TW_NUV <- cnv[cnv$ID %in% ID_TW_NUV,1:6]
 cnv_UV <- cnv[cnv$ID %in% ID_UV,1:6]
@@ -197,11 +223,35 @@ write.table(cnv_BRAF, file = "CNV_BRAF.txt", append = FALSE, quote = FALSE,
             sep = "\t", dec = ".", row.names = FALSE,
             col.names = TRUE)
 
+write.table(cnv_BRAF_UV, file = "CNV_BRAF_UV.txt", append = FALSE, quote = FALSE,
+            sep = "\t", dec = ".", row.names = FALSE,
+            col.names = TRUE)
+
+write.table(cnv_BRAF_NUV, file = "CNV_BRAF_NUV.txt", append = FALSE, quote = FALSE,
+            sep = "\t", dec = ".", row.names = FALSE,
+            col.names = TRUE)
+
 write.table(cnv_RAS, file = "CNV_RAS.txt", append = FALSE, quote = FALSE,
             sep = "\t", dec = ".", row.names = FALSE,
             col.names = TRUE)
 
+write.table(cnv_RAS_UV, file = "CNV_RAS_UV.txt", append = FALSE, quote = FALSE,
+            sep = "\t", dec = ".", row.names = FALSE,
+            col.names = TRUE)
+
+write.table(cnv_RAS_NUV, file = "CNV_RAS_NUV.txt", append = FALSE, quote = FALSE,
+            sep = "\t", dec = ".", row.names = FALSE,
+            col.names = TRUE)
+
 write.table(cnv_NF1, file = "CNV_NF1.txt", append = FALSE, quote = FALSE,
+            sep = "\t", dec = ".", row.names = FALSE,
+            col.names = TRUE)
+
+write.table(cnv_NF1_UV, file = "CNV_NF1_UV.txt", append = FALSE, quote = FALSE,
+            sep = "\t", dec = ".", row.names = FALSE,
+            col.names = TRUE)
+
+write.table(cnv_NF1_NUV, file = "CNV_NF1_NUV.txt", append = FALSE, quote = FALSE,
             sep = "\t", dec = ".", row.names = FALSE,
             col.names = TRUE)
 
